@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Purrebot — Automatiske purringer for håndverkere{% endblock %}
+
+{% block head %}
+<style>
+  .hero { max-width: 860px; margin: 0 auto; padding: 80px 24px 56px; text-align: center; }
+  .badge { display: inline-block; background: var(--blue-light); color: var(--blue); font-size: 0.78rem; font-weight: 700; padding: 4px 12px; border-radius: 100px; margin-bottom: 20px; letter-spacing: 0.4px; text-transform: uppercase; }
+  h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; color: var(--navy); line-height: 1.15; letter-spacing: -1px; margin-bottom: 20px; }
+  h1 em { color: var(--blue); font-style: normal; }
+  .hero-sub { font-size: 1.1rem; color: var(--muted); max-width: 520px; margin: 0 auto 36px; line-height: 1.65; }
+  .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .hero-note { margin-top: 12px; font-size: 0.82rem; color: var(--muted); }
+
+  /* MOCK DASHBOARD */
+  .mock-wrap { max-width: 780px; margin: 0 auto 80px; padding: 0 24px; }
+  .mock-card { background: white; border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 8px 40px rgba(0,0,0,0.07); overflow: hidden; }
+  .mock-bar { background: #F1F5F9; padding: 10px 16px; display: flex; gap: 6px; align-items: center; border-bottom: 1px solid var(--border); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #FC8181; } .dot-y { background: #F6C90E; } .dot-g { background: #68D391; }
+  .mock-inner { padding: 20px 24px; font-size: 0.8rem; }
+  .mock-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  .mock-stat { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .mock-stat .val { font-size: 1.4rem; font-weight: 800; color: var(--navy); }
+  .mock-stat .lbl { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+  .mock-table { width: 100%; border-collapse: collapse; }
+  .mock-table th { text-align: left; padding: 7px 10px; font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+  .mock-table td { padding: 9px 10px; font-size: 0.78rem; color: var(--text); border-bottom: 1px solid #f1f5f9; }
+  .badge-red { background: #FEE2E2; color: #991B1B; padding: 2px 8px; border-radius: 100px; font-size: 0.68rem; font-weight: 600; }
+  .badge-amber { background: #FEF3C7; color: #92400E; padding: 2px 8px; border-radius: 100px; font-size: 0.68rem; font-weight: 600; }
+  .badge-green { background: #DCFCE7; color: #166534; padding: 2px 8px; border-radius: 100px; font-size: 0.68rem; font-weight: 600; }
+
+  /* HOW IT WORKS */
+  .section { max-width: 860px; margin: 0 auto; padding: 60px 24px; }
+  .section-title { font-size: 1.75rem; font-weight: 800; color: var(--navy); text-align: center; margin-bottom: 8px; letter-spacing: -0.5px; }
+  .section-sub { color: var(--muted); text-align: center; margin-bottom: 44px; font-size: 1rem; }
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+  .step { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 22px; }
+  .step-num { width: 34px; height: 34px; background: var(--blue); color: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.95rem; margin-bottom: 12px; }
+  .step h3 { font-size: 0.95rem; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+  .step p { font-size: 0.85rem; color: var(--muted); line-height: 1.55; }
+
+  /* PRICING */
+  .pricing-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; max-width: 540px; margin: 0 auto; }
+  .pricing-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 26px; }
+  .pricing-card.featured { border-color: var(--blue); box-shadow: 0 0 0 2px var(--blue-light); }
+  .plan-label { font-size: 0.78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .plan-label.blue { color: var(--blue); }
+  .price { font-size: 2.2rem; font-weight: 800; color: var(--navy); line-height: 1; margin-bottom: 4px; }
+  .price-note { font-size: 0.82rem; color: var(--muted); margin-bottom: 18px; }
+  .features { list-style: none; display: flex; flex-direction: column; gap: 7px; margin-bottom: 22px; }
+  .features li { font-size: 0.875rem; color: var(--text); display: flex; gap: 8px; align-items: flex-start; }
+  .features li::before { content: "✓"; color: var(--green); font-weight: 700; flex-shrink: 0; }
+  .btn-plan { display: block; text-align: center; padding: 11px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; text-decoration: none; transition: opacity 0.15s; }
+  .btn-plan.primary { background: var(--blue); color: white; }
+  .btn-plan.outline { background: transparent; color: var(--blue); border: 1.5px solid var(--blue); }
+  .btn-plan:hover { opacity: 0.85; }
+
+  @media (max-width: 480px) { .hero { padding: 48px 16px 36px; } h1 { font-size: 1.85rem; } .mock-stats { grid-template-columns: 1fr 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="badge">🇳🇴 Laget for norske håndverkere</div>
+  <h1>Slutt å jage betaling.<br/><em>La Purrebot gjøre det.</em></h1>
+  <p class="hero-sub">
+    Du gjør jobben — kunden glemmer å betale. Purrebot sender automatiske
+    purringer på dine vegne, så du slipper den ubehagelige samtalen.
+  </p>
+  <div class="hero-actions">
+    <a class="btn btn-primary" style="padding:14px 32px;font-size:1rem" href="/register">Prøv gratis — ingen kredittkort</a>
+  </div>
+  <p class="hero-note">3 gratis fakturaer. Ingen binding.</p>
+</section>
+
+<!-- MOCK DASHBOARD -->
+<div class="mock-wrap">
+  <div class="mock-card">
+    <div class="mock-bar">
+      <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+      <span style="font-size:0.72rem;color:#94A3B8;margin-left:8px">Purrebot Dashboard</span>
+    </div>
+    <div class="mock-inner">
+      <div class="mock-stats">
+        <div class="mock-stat"><div class="val">3</div><div class="lbl">Aktive fakturaer</div></div>
+        <div class="mock-stat"><div class="val" style="color:var(--red)">24 500 kr</div><div class="lbl">Utestående</div></div>
+        <div class="mock-stat"><div class="val" style="color:var(--green)">7</div><div class="lbl">Purringer sendt</div></div>
+      </div>
+      <table class="mock-table">
+        <thead><tr><th>Kunde</th><th>Beløp</th><th>Forfaller</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Hansen Elektro AS</td><td>12 500 kr</td><td>15.09.2026</td><td><span class="badge-red">Forfalt 7 dager</span></td></tr>
+          <tr><td>Nilsen VVS</td><td>8 200 kr</td><td>20.09.2026</td><td><span class="badge-amber">Forfaller om 3 dager</span></td></tr>
+          <tr><td>Berg Bygg</td><td>3 800 kr</td><td>28.09.2026</td><td><span class="badge-green">Venter</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section class="section">
+  <h2 class="section-title">Slik fungerer det</h2>
+  <p class="section-sub">Tre steg. Aldri mer manuell purring.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <h3>Legg inn faktura</h3>
+      <p>Skriv inn kundens navn, e-post, beløp og forfallsdato. Tar 30 sekunder.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <h3>Purrebot sender automatisk</h3>
+      <p>3 dager før forfall, på forfallsdato, etter 7 dager og 14 dager — profesjonelle e-poster på norsk.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h3>Du får betalt</h3>
+      <p>Marker fakturaen som betalt og gå videre. Purrebot sørger for resten.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="section" style="padding-top:0">
+  <h2 class="section-title">Enkel prising</h2>
+  <p class="section-sub">Start gratis. Ingen skjulte kostnader.</p>
+  <div class="pricing-cards">
+    <div class="pricing-card">
+      <div class="plan-label">Gratis</div>
+      <div class="price">0 kr</div>
+      <div class="price-note">for alltid</div>
+      <ul class="features">
+        <li>3 fakturaer inkludert</li>
+        <li>Alle purretrinn</li>
+        <li>Norsk e-post til kunden</li>
+      </ul>
+      <a class="btn-plan outline" href="/register">Kom i gang</a>
+    </div>
+    <div class="pricing-card featured">
+      <div class="plan-label blue">Ubegrenset</div>
+      <div class="price">199 kr</div>
+      <div class="price-note">per måned · si opp når du vil</div>
+      <ul class="features">
+        <li>Ubegrenset antall fakturaer</li>
+        <li>Alle purretrinn</li>
+        <li>Prioritert support</li>
+        <li>Alle fremtidige funksjoner</li>
+      </ul>
+      <a class="btn-plan primary" href="/register">Start gratis</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

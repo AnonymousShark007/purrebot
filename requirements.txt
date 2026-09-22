@@ -1,0 +1,8 @@
+flask
+flask-sqlalchemy
+werkzeug
+stripe
+sendgrid
+apscheduler
+gunicorn
+psycopg2-binary

@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Purrebot{% endblock %}
+{% block head %}
+<style>
+  .page { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
+  .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
+  .page-header h1 { font-size: 1.4rem; font-weight: 800; color: var(--navy); }
+
+  /* STATS ROW */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 28px; }
+  .stat-card { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; }
+  .stat-card .val { font-size: 1.6rem; font-weight: 800; color: var(--navy); line-height: 1; }
+  .stat-card .val.red { color: var(--red); }
+  .stat-card .val.green { color: var(--green); }
+  .stat-card .lbl { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+
+  /* UPGRADE BANNER */
+  .upgrade-banner {
+    background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
+    border: 1px solid #BFDBFE;
+    border-radius: 10px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .upgrade-banner p { font-size: 0.875rem; color: #1E40AF; font-weight: 500; }
+  .upgrade-banner strong { color: var(--navy); }
+
+  /* SECTION TITLE */
+  .section-label { font-size: 0.78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
+
+  /* INVOICE TABLE */
+  .invoice-table { width: 100%; border-collapse: collapse; background: white; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 32px; }
+  .invoice-table th { text-align: left; padding: 10px 14px; font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; background: #F8FAFC; border-bottom: 1px solid var(--border); }
+  .invoice-table td { padding: 12px 14px; font-size: 0.875rem; color: var(--text); border-bottom: 1px solid #F1F5F9; vertical-align: middle; }
+  .invoice-table tr:last-child td { border-bottom: none; }
+  .invoice-table tr:hover td { background: #FAFBFC; }
+
+  /* STATUS BADGES */
+  .badge { padding: 3px 9px; border-radius: 100px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+  .badge-overdue  { background: #FEE2E2; color: #991B1B; }
+  .badge-due      { background: #FEF3C7; color: #92400E; }
+  .badge-soon     { background: #FFF7ED; color: #C2410C; }
+  .badge-pending  { background: #F1F5F9; color: #475569; }
+  .badge-paid     { background: #DCFCE7; color: #166534; }
+
+  /* ACTIONS */
+  .actions { display: flex; gap: 6px; }
+  .amount { font-weight: 700; color: var(--navy); font-variant-numeric: tabular-nums; }
+
+  /* EMPTY STATE */
+  .empty { text-align: center; padding: 48px 24px; color: var(--muted); }
+  .empty h3 { font-size: 1.1rem; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+  .empty p { font-size: 0.9rem; margin-bottom: 20px; }
+
+  /* REMINDER DOTS */
+  .rem-dots { display: flex; gap: 3px; flex-wrap: wrap; }
+  .rem-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); opacity: 0.3; }
+  .rem-dot.sent { opacity: 1; background: var(--green); }
+
+  @media (max-width: 640px) {
+    .invoice-table { font-size: 0.8rem; }
+    .invoice-table th, .invoice-table td { padding: 9px 10px; }
+    .col-desc, .col-reminders { display: none; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="page-header">
+    <h1>Dashboard</h1>
+    <a class="btn btn-primary" href="/invoices/add">+ Legg til faktura</a>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="val">{{ unpaid|length }}</div>
+      <div class="lbl">Aktive fakturaer</div>
+    </div>
+    <div class="stat-card">
+      <div class="val red">{{ '{:,.0f}'.format(total_outstanding).replace(',', ' ') }} kr</div>
+      <div class="lbl">Utestående beløp</div>
+    </div>
+    <div class="stat-card">
+      <div class="val green">{{ paid|length }}</div>
+      <div class="lbl">Betalte fakturaer</div>
+    </div>
+  </div>
+
+  <!-- UPGRADE BANNER -->
+  {% if not user.subscription_active %}
+  <div class="upgrade-banner">
+    <p>Du bruker <strong>{{ user.free_invoices_used }} av 3</strong> gratis fakturaer.
+    {% if free_left == 0 %}Du har brukt alle — oppgrader for å legge til flere.
+    {% else %}{{ free_left }} igjen.{% endif %}</p>
+    <a class="btn btn-primary btn-sm" href="/subscribe">Oppgrader — 199 kr/mnd</a>
+  </div>
+  {% endif %}
+
+  <!-- UNPAID INVOICES -->
+  {% if unpaid %}
+  <div class="section-label">Ubetalte fakturaer</div>
+  <table class="invoice-table">
+    <thead>
+      <tr>
+        <th>Kunde</th>
+        <th class="col-desc">Beskrivelse</th>
+        <th>Beløp</th>
+        <th>Forfallsdato</th>
+        <th>Status</th>
+        <th class="col-reminders">Purringer</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for inv in unpaid %}
+        {% set days_diff = (inv.due_date - today).days %}
+        {% if days_diff < 0 %}
+          {% set badge_class = 'badge-overdue' %}
+          {% set badge_text = 'Forfalt ' ~ (-days_diff) ~ ' dager' %}
+        {% elif days_diff == 0 %}
+          {% set badge_class = 'badge-due' %}
+          {% set badge_text = 'Forfaller i dag' %}
+        {% elif days_diff <= 3 %}
+          {% set badge_class = 'badge-soon' %}
+          {% set badge_text = 'Om ' ~ days_diff ~ ' dager' %}
+        {% else %}
+          {% set badge_class = 'badge-pending' %}
+          {% set badge_text = 'Om ' ~ days_diff ~ ' dager' %}
+        {% endif %}
+        {% set sent_types = inv.reminders|map(attribute='reminder_type')|list %}
+        <tr>
+          <td><strong>{{ inv.client_name }}</strong><br/><span style="color:var(--muted);font-size:0.78rem">{{ inv.client_email }}</span></td>
+          <td class="col-desc" style="color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ inv.description or '—' }}</td>
+          <td class="amount">{{ '{:,.0f}'.format(inv.amount_nok).replace(',', ' ') }} kr</td>
+          <td>{{ inv.due_date.strftime('%d.%m.%Y') }}</td>
+          <td><span class="badge {{ badge_class }}">{{ badge_text }}</span></td>
+          <td class="col-reminders">
+            <div class="rem-dots" title="Purringer sendt">
+              <div class="rem-dot {% if 'before_3' in sent_types %}sent{% endif %}" title="3 dager før"></div>
+              <div class="rem-dot {% if 'due_today' in sent_types %}sent{% endif %}" title="Forfallsdato"></div>
+              <div class="rem-dot {% if 'overdue_7' in sent_types %}sent{% endif %}" title="+7 dager"></div>
+              <div class="rem-dot {% if 'overdue_14' in sent_types %}sent{% endif %}" title="+14 dager"></div>
+            </div>
+          </td>
+          <td>
+            <div class="actions">
+              <form method="POST" action="/invoices/{{ inv.id }}/paid">
+                <button class="btn btn-green btn-sm">Betalt ✓</button>
+              </form>
+              <form method="POST" action="/invoices/{{ inv.id }}/delete" onsubmit="return confirm('Slett faktura for {{ inv.client_name }}?')">
+                <button class="btn btn-sm" style="background:#f1f5f9;color:var(--muted)">Slett</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">
+    <h3>Ingen aktive fakturaer</h3>
+    <p>Legg til en faktura for å starte automatisk purring.</p>
+    <a class="btn btn-primary" href="/invoices/add">+ Legg til faktura</a>
+  </div>
+  {% endif %}
+
+  <!-- PAID INVOICES -->
+  {% if paid %}
+  <div class="section-label">Betalte fakturaer</div>
+  <table class="invoice-table" style="opacity:0.7">
+    <thead>
+      <tr>
+        <th>Kunde</th>
+        <th>Beløp</th>
+        <th>Forfallsdato</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for inv in paid %}
+      <tr>
+        <td>{{ inv.client_name }}</td>
+        <td class="amount">{{ '{:,.0f}'.format(inv.amount_nok).replace(',', ' ') }} kr</td>
+        <td>{{ inv.due_date.strftime('%d.%m.%Y') }}</td>
+        <td><span class="badge badge-paid">Betalt</span></td>
+        <td>
+          <form method="POST" action="/invoices/{{ inv.id }}/delete" onsubmit="return confirm('Slett faktura?')">
+            <button class="btn btn-sm" style="background:#f1f5f9;color:var(--muted)">Slett</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

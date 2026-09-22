@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Oppgrader — Purrebot{% endblock %}
+{% block head %}
+<style>
+  .page { max-width: 540px; margin: 0 auto; padding: 60px 24px; text-align: center; }
+  .page h1 { font-size: 1.7rem; font-weight: 800; color: var(--navy); margin-bottom: 10px; }
+  .page .sub { color: var(--muted); margin-bottom: 36px; font-size: 0.95rem; }
+  .price-big { font-size: 3rem; font-weight: 800; color: var(--navy); line-height: 1; }
+  .price-period { color: var(--muted); font-size: 1rem; margin-bottom: 28px; }
+  .features { list-style: none; text-align: left; max-width: 300px; margin: 0 auto 32px; display: flex; flex-direction: column; gap: 9px; }
+  .features li { display: flex; gap: 10px; font-size: 0.9rem; color: var(--text); }
+  .features li::before { content: "✓"; color: var(--green); font-weight: 700; flex-shrink: 0; }
+  .guarantee { font-size: 0.82rem; color: var(--muted); margin-top: 16px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page">
+  <h1>Ubegrenset tilgang</h1>
+  <p class="sub">Du har brukt opp de gratis fakturaene. Oppgrader for å legge til ubegrenset antall.</p>
+
+  <div class="card">
+    <div class="price-big">199 kr</div>
+    <div class="price-period">per måned · si opp når du vil</div>
+    <ul class="features">
+      <li>Ubegrenset antall fakturaer</li>
+      <li>Automatiske purringer på alle fakturaer</li>
+      <li>Norsk e-post til kunden</li>
+      <li>Dashboard med full oversikt</li>
+      <li>Alle fremtidige funksjoner</li>
+    </ul>
+    <form method="POST" action="/create-checkout">
+      <button type="submit" class="btn btn-primary" style="width:100%;padding:13px;font-size:1rem">
+        Betal med kort →
+      </button>
+    </form>
+    <p class="guarantee">🔒 Sikker betaling via Stripe · Si opp når som helst</p>
+  </div>
+  <p style="margin-top:16px"><a href="/dashboard" style="color:var(--muted);font-size:0.875rem">← Tilbake til dashboard</a></p>
+</div>
+{% endblock %}
