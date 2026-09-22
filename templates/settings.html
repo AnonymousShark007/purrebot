@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Innstillinger — Purrebot{% endblock %}
+{% block head %}
+<style>
+  .page { max-width: 520px; margin: 0 auto; padding: 48px 24px; }
+  .page h1 { font-size: 1.5rem; font-weight: 800; color: var(--navy); margin-bottom: 6px; }
+  .page .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 32px; }
+  .info-box { background: var(--blue-light); border: 1px solid #BFDBFE; border-radius: 8px; padding: 13px 16px; font-size: 0.85rem; color: #1E40AF; margin-bottom: 24px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page">
+  <h1>Innstillinger</h1>
+  <p class="sub">Administrer kontoen din og betalingsdetaljer.</p>
+
+  <div class="card">
+    <h2 style="font-size:1rem;font-weight:700;color:var(--navy);margin-bottom:6px">Kontonummer for betaling</h2>
+    <p style="font-size:0.875rem;color:var(--muted);margin-bottom:16px">
+      Dette kontonummeret vises automatisk i alle purre-e-poster til kundene dine, slik at de vet hvor de skal betale.
+    </p>
+
+    {% if not user.bank_account %}
+    <div class="info-box">
+      ⚠️ Du har ikke lagt inn kontonummer ennå. Kundene dine vil ikke se betalingsinformasjon i purringene.
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/settings">
+      <div class="form-group">
+        <label for="bank_account">Kontonummer (11 siffer)</label>
+        <input type="text" id="bank_account" name="bank_account"
+               placeholder="1234 56 78901"
+               value="{{ user.bank_account or '' }}"
+               maxlength="15" />
+        <p class="hint">Skriv inn norsk kontonummer uten mellomrom eller punktum. Eksempel: 12345678901</p>
+      </div>
+      <button type="submit" class="btn btn-primary">Lagre innstillinger</button>
+    </form>
+  </div>
+
+  <div class="card" style="margin-top:20px">
+    <h2 style="font-size:1rem;font-weight:700;color:var(--navy);margin-bottom:6px">Konto</h2>
+    <p style="font-size:0.875rem;color:var(--muted);margin-bottom:12px">{{ user.email }}</p>
+    <p style="font-size:0.875rem;color:var(--muted)">
+      Status:
+      {% if user.subscription_active %}
+        <span style="color:var(--green);font-weight:600">Ubegrenset abonnement aktivt ✓</span>
+      {% else %}
+        Gratis plan ({{ user.free_invoices_used }}/3 fakturaer brukt)
+        — <a href="/subscribe" style="color:var(--blue)">Oppgrader</a>
+      {% endif %}
+    </p>
+  </div>
+
+  <p style="margin-top:20px"><a href="/dashboard" style="color:var(--muted);font-size:0.875rem">← Tilbake til dashboard</a></p>
+</div>
+{% endblock %}
