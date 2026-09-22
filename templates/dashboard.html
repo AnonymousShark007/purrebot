@@ -6,7 +6,6 @@
   .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
   .page-header h1 { font-size: 1.4rem; font-weight: 800; color: var(--navy); }
 
-  /* STATS ROW */
   .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 28px; }
   .stat-card { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; }
   .stat-card .val { font-size: 1.6rem; font-weight: 800; color: var(--navy); line-height: 1; }
@@ -14,33 +13,18 @@
   .stat-card .val.green { color: var(--green); }
   .stat-card .lbl { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
 
-  /* UPGRADE BANNER */
-  .upgrade-banner {
-    background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
-    border: 1px solid #BFDBFE;
-    border-radius: 10px;
-    padding: 16px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
-    gap: 12px;
-  }
+  .upgrade-banner { background: linear-gradient(135deg, #EFF6FF, #DBEAFE); border: 1px solid #BFDBFE; border-radius: 10px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
   .upgrade-banner p { font-size: 0.875rem; color: #1E40AF; font-weight: 500; }
   .upgrade-banner strong { color: var(--navy); }
 
-  /* SECTION TITLE */
   .section-label { font-size: 0.78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
 
-  /* INVOICE TABLE */
   .invoice-table { width: 100%; border-collapse: collapse; background: white; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 32px; }
   .invoice-table th { text-align: left; padding: 10px 14px; font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; background: #F8FAFC; border-bottom: 1px solid var(--border); }
   .invoice-table td { padding: 12px 14px; font-size: 0.875rem; color: var(--text); border-bottom: 1px solid #F1F5F9; vertical-align: middle; }
   .invoice-table tr:last-child td { border-bottom: none; }
   .invoice-table tr:hover td { background: #FAFBFC; }
 
-  /* STATUS BADGES */
   .badge { padding: 3px 9px; border-radius: 100px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
   .badge-overdue  { background: #FEE2E2; color: #991B1B; }
   .badge-due      { background: #FEF3C7; color: #92400E; }
@@ -48,16 +32,13 @@
   .badge-pending  { background: #F1F5F9; color: #475569; }
   .badge-paid     { background: #DCFCE7; color: #166534; }
 
-  /* ACTIONS */
   .actions { display: flex; gap: 6px; }
   .amount { font-weight: 700; color: var(--navy); font-variant-numeric: tabular-nums; }
 
-  /* EMPTY STATE */
   .empty { text-align: center; padding: 48px 24px; color: var(--muted); }
   .empty h3 { font-size: 1.1rem; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
   .empty p { font-size: 0.9rem; margin-bottom: 20px; }
 
-  /* REMINDER DOTS */
   .rem-dots { display: flex; gap: 3px; flex-wrap: wrap; }
   .rem-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); opacity: 0.3; }
   .rem-dot.sent { opacity: 1; background: var(--green); }
@@ -77,7 +58,13 @@
     <a class="btn btn-primary" href="/invoices/add">+ Legg til faktura</a>
   </div>
 
-  <!-- STATS -->
+  {% if not user.bank_account %}
+  <div style="background:#FEF3C7;border:1px solid #FDE68A;border-radius:10px;padding:14px 18px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <p style="font-size:0.875rem;color:#92400E;font-weight:500">⚠️ <strong>Kontonummer mangler.</strong> Kundene dine vil ikke se betalingsinformasjon i purringene før du legger det inn.</p>
+    <a href="/settings" style="background:#F59E0B;color:white;text-decoration:none;padding:7px 16px;border-radius:7px;font-size:0.82rem;font-weight:700;white-space:nowrap">Legg inn nå →</a>
+  </div>
+  {% endif %}
+
   <div class="stats">
     <div class="stat-card">
       <div class="val">{{ unpaid|length }}</div>
@@ -93,7 +80,6 @@
     </div>
   </div>
 
-  <!-- UPGRADE BANNER -->
   {% if not user.subscription_active %}
   <div class="upgrade-banner">
     <p>Du bruker <strong>{{ user.free_invoices_used }} av 3</strong> gratis fakturaer.
@@ -103,7 +89,6 @@
   </div>
   {% endif %}
 
-  <!-- UNPAID INVOICES -->
   {% if unpaid %}
   <div class="section-label">Ubetalte fakturaer</div>
   <table class="invoice-table">
@@ -171,7 +156,6 @@
   </div>
   {% endif %}
 
-  <!-- PAID INVOICES -->
   {% if paid %}
   <div class="section-label">Betalte fakturaer</div>
   <table class="invoice-table" style="opacity:0.7">
