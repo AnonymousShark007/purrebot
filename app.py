@@ -15,7 +15,6 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-change-me')
 
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///purrebot.db')
-# Railway gives postgres:// but SQLAlchemy needs postgresql://
 if database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
@@ -32,8 +31,6 @@ FROM_EMAIL = os.environ.get('FROM_EMAIL', 'purrebot@purrebot.no')
 FREE_LIMIT = 3
 
 
-# ── Models ────────────────────────────────────────────────────────────────────
-
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
@@ -41,6 +38,7 @@ class User(db.Model):
     stripe_customer_id = db.Column(db.String(100))
     subscription_active = db.Column(db.Boolean, default=False)
     free_invoices_used = db.Column(db.Integer, default=0)
+    bank_account = db.Column(db.String(30))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     invoices = db.relationship('Invoice', backref='user', lazy=True, cascade='all, delete-orphan')
 
@@ -53,7 +51,7 @@ class Invoice(db.Model):
     description = db.Column(db.String(500))
     amount_nok = db.Column(db.Float, nullable=False)
     due_date = db.Column(db.Date, nullable=False)
-    status = db.Column(db.String(20), default='unpaid')  # unpaid | paid
+    status = db.Column(db.String(20), default='unpaid')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     reminders = db.relationship('ReminderLog', backref='invoice', lazy=True, cascade='all, delete-orphan')
 
@@ -64,8 +62,6 @@ class ReminderLog(db.Model):
     reminder_type = db.Column(db.String(50), nullable=False)
     sent_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-
-# ── Auth helper ───────────────────────────────────────────────────────────────
 
 def login_required(f):
     @wraps(f)
@@ -79,8 +75,6 @@ def login_required(f):
 def current_user():
     return User.query.get(session['user_id']) if 'user_id' in session else None
 
-
-# ── Email ─────────────────────────────────────────────────────────────────────
 
 def send_email(to_email, subject, html_content):
     if not SENDGRID_API_KEY:
@@ -102,12 +96,16 @@ def build_reminder_email(invoice, reminder_type, sender_email):
     due_str = invoice.due_date.strftime('%d.%m.%Y')
     desc_row = f'<tr><td class="l">Beskrivelse</td><td>{invoice.description}</td></tr>' if invoice.description else ''
 
+    user = invoice.user
+    bank_row = f'<tr><td class="l" style="padding:9px 14px;border:1px solid #e2e8f0;font-weight:600;color:#334155">Kontonummer</td><td style="padding:9px 14px;border:1px solid #e2e8f0;color:#334155"><strong>{user.bank_account}</strong></td></tr>' if user and user.bank_account else ''
+
     table = f'''
     <table style="border-collapse:collapse;width:100%;max-width:420px;margin:20px 0;font-size:14px">
       <tr style="background:#f8fafc"><td class="l" style="padding:9px 14px;border:1px solid #e2e8f0;font-weight:600;color:#334155">Kunde</td><td style="padding:9px 14px;border:1px solid #e2e8f0;color:#334155">{invoice.client_name}</td></tr>
       <tr><td class="l" style="padding:9px 14px;border:1px solid #e2e8f0;font-weight:600;color:#334155">Beløp</td><td style="padding:9px 14px;border:1px solid #e2e8f0;color:#334155"><strong>{amount} kr</strong></td></tr>
       <tr style="background:#f8fafc"><td class="l" style="padding:9px 14px;border:1px solid #e2e8f0;font-weight:600;color:#334155">Forfallsdato</td><td style="padding:9px 14px;border:1px solid #e2e8f0;color:#334155">{due_str}</td></tr>
       {desc_row}
+      {bank_row}
     </table>'''
 
     templates = {
@@ -152,8 +150,6 @@ def build_reminder_email(invoice, reminder_type, sender_email):
     return t['subject'], html
 
 
-# ── Scheduler ─────────────────────────────────────────────────────────────────
-
 def check_and_send_reminders():
     with app.app_context():
         today = date.today()
@@ -163,7 +159,6 @@ def check_and_send_reminders():
             days_diff = (invoice.due_date - today).days
             sent_types = {r.reminder_type for r in invoice.reminders}
             user = User.query.get(invoice.user_id)
-
             schedule = [
                 ('before_3', days_diff == 3),
                 ('due_today', days_diff == 0),
@@ -176,7 +171,6 @@ def check_and_send_reminders():
                     if send_email(invoice.client_email, subject, html):
                         db.session.add(ReminderLog(invoice_id=invoice.id, reminder_type=rtype))
                         sent += 1
-
         if sent:
             db.session.commit()
         print(f'[SCHEDULER] Checked {len(invoices)} invoices, sent {sent} reminders')
@@ -188,8 +182,6 @@ scheduler.start()
 atexit.register(lambda: scheduler.shutdown(wait=False))
 
 
-# ── Routes ────────────────────────────────────────────────────────────────────
-
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -200,26 +192,21 @@ def register():
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
-
         if not email or not password:
             flash('Fyll inn alle felt.', 'error')
             return render_template('register.html')
-
         if len(password) < 8:
             flash('Passordet må være minst 8 tegn.', 'error')
             return render_template('register.html')
-
         if User.query.filter_by(email=email).first():
             flash('Denne e-postadressen er allerede registrert.', 'error')
             return render_template('register.html')
-
         user = User(email=email, password_hash=generate_password_hash(password))
         db.session.add(user)
         db.session.commit()
         session['user_id'] = user.id
         flash('Velkommen til Purrebot!', 'success')
         return redirect(url_for('dashboard'))
-
     return render_template('register.html')
 
 
@@ -229,14 +216,11 @@ def login():
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         user = User.query.filter_by(email=email).first()
-
         if not user or not check_password_hash(user.password_hash, password):
             flash('Feil e-post eller passord.', 'error')
             return render_template('login.html')
-
         session['user_id'] = user.id
         return redirect(url_for('dashboard'))
-
     return render_template('login.html')
 
 
@@ -265,24 +249,20 @@ def dashboard():
 @login_required
 def add_invoice():
     user = current_user()
-
     if not user.subscription_active and user.free_invoices_used >= FREE_LIMIT:
         flash('Du har brukt de 3 gratis fakturaene. Oppgrader for ubegrenset tilgang.', 'error')
         return redirect(url_for('subscribe'))
-
     if request.method == 'POST':
         client_name = request.form.get('client_name', '').strip()
         client_email = request.form.get('client_email', '').strip()
         description = request.form.get('description', '').strip()
         amount_str = request.form.get('amount_nok', '').replace(',', '.').replace(' ', '')
         due_date_str = request.form.get('due_date', '')
-
         errors = []
         if not client_name: errors.append('Kundenavn mangler.')
         if not client_email: errors.append('Kundens e-post mangler.')
         if not amount_str: errors.append('Beløp mangler.')
         if not due_date_str: errors.append('Forfallsdato mangler.')
-
         amount_nok = None
         due_date = None
         if amount_str:
@@ -292,18 +272,15 @@ def add_invoice():
                     errors.append('Beløpet må være større enn 0.')
             except ValueError:
                 errors.append('Ugyldig beløp.')
-
         if due_date_str:
             try:
                 due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
             except ValueError:
                 errors.append('Ugyldig dato.')
-
         if errors:
             for e in errors:
                 flash(e, 'error')
             return render_template('add_invoice.html')
-
         invoice = Invoice(user_id=user.id, client_name=client_name,
                           client_email=client_email, description=description,
                           amount_nok=amount_nok, due_date=due_date)
@@ -313,7 +290,6 @@ def add_invoice():
         db.session.commit()
         flash(f'Faktura for {client_name} lagt til. Purringer sendes automatisk.', 'success')
         return redirect(url_for('dashboard'))
-
     return render_template('add_invoice.html')
 
 
@@ -342,6 +318,22 @@ def delete_invoice(invoice_id):
     return redirect(url_for('dashboard'))
 
 
+@app.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():
+    user = current_user()
+    if request.method == 'POST':
+        bank_account = request.form.get('bank_account', '').strip().replace(' ', '').replace('.', '')
+        if bank_account and not bank_account.isdigit():
+            flash('Kontonummeret kan kun inneholde sifre.', 'error')
+        else:
+            user.bank_account = bank_account or None
+            db.session.commit()
+            flash('Innstillinger lagret.', 'success')
+        return redirect(url_for('settings'))
+    return render_template('settings.html', user=user)
+
+
 @app.route('/subscribe')
 @login_required
 def subscribe():
@@ -359,7 +351,6 @@ def create_checkout():
         customer = stripe.Customer.create(email=user.email)
         user.stripe_customer_id = customer.id
         db.session.commit()
-
     checkout = stripe.checkout.Session.create(
         customer=user.stripe_customer_id,
         payment_method_types=['card'],
@@ -389,24 +380,20 @@ def webhook():
         event = stripe.Webhook.construct_event(payload, sig, STRIPE_WEBHOOK_SECRET)
     except Exception:
         return '', 400
-
     etype = event['type']
     customer_id = event['data']['object'].get('customer')
     user = User.query.filter_by(stripe_customer_id=customer_id).first() if customer_id else None
-
     if user:
         if etype == 'customer.subscription.created':
             user.subscription_active = True
         elif etype in ('customer.subscription.deleted', 'customer.subscription.paused'):
             user.subscription_active = False
         db.session.commit()
-
     return '', 200
 
 
 @app.route('/run-reminders')
 def run_reminders():
-    """Manual trigger for testing. Remove or protect in production."""
     check_and_send_reminders()
     return 'Reminders checked.', 200
 
@@ -415,8 +402,6 @@ def run_reminders():
 def health():
     return 'ok', 200
 
-
-# ── Init ──────────────────────────────────────────────────────────────────────
 
 with app.app_context():
     db.create_all()
